@@ -56,14 +56,29 @@ public final class PathPackageLocator {
   // representation is used as a key. We want a change to output base not to invalidate things.
   @Nullable private final transient Path outputBase;
 
+  private final PathFragment externalRepositoryLocation;
+
   private final ImmutableList<BuildFileName> buildFilesByPriority;
 
   @VisibleForTesting
   public PathPackageLocator(
       @Nullable Path outputBase, List<Root> pathEntries, List<BuildFileName> buildFilesByPriority) {
+    this(
+        outputBase,
+        pathEntries,
+        buildFilesByPriority,
+        LabelConstants.EXTERNAL_REPOSITORY_LOCATION);
+  }
+
+  public PathPackageLocator(
+      @Nullable Path outputBase,
+      List<Root> pathEntries,
+      List<BuildFileName> buildFilesByPriority,
+      PathFragment externalRepositoryLocation) {
     this.outputBase = outputBase;
     this.pathEntries = ImmutableList.copyOf(pathEntries);
     this.buildFilesByPriority = ImmutableList.copyOf(buildFilesByPriority);
+    this.externalRepositoryLocation = externalRepositoryLocation;
   }
 
   /**
@@ -107,7 +122,7 @@ public final class PathPackageLocator {
       for (BuildFileName buildFileName : buildFilesByPriority) {
         Path buildFile =
             outputBase
-                .getRelative(LabelConstants.EXTERNAL_REPOSITORY_LOCATION)
+                .getRelative(externalRepositoryLocation)
                 .getRelative(packageIdentifier.getRepository().getName())
                 .getRelative(packageIdentifier.getSourceRoot())
                 .getRelative(buildFileName.getFilenameFragment());
@@ -165,13 +180,32 @@ public final class PathPackageLocator {
       PathFragment workspace,
       Path clientWorkingDirectory,
       List<BuildFileName> buildFilesByPriority) {
+    return create(
+        outputBase,
+        pathElements,
+        eventHandler,
+        workspace,
+        clientWorkingDirectory,
+        buildFilesByPriority,
+        LabelConstants.EXTERNAL_REPOSITORY_LOCATION);
+  }
+
+  public static PathPackageLocator create(
+      Path outputBase,
+      List<String> pathElements,
+      EventHandler eventHandler,
+      PathFragment workspace,
+      Path clientWorkingDirectory,
+      List<BuildFileName> buildFilesByPriority,
+      PathFragment externalRepositoryLocation) {
     return createInternal(
         outputBase,
         pathElements,
         eventHandler,
         workspace,
         clientWorkingDirectory,
-        buildFilesByPriority);
+        buildFilesByPriority,
+        externalRepositoryLocation);
   }
 
   /**
@@ -197,7 +231,8 @@ public final class PathPackageLocator {
       EventHandler eventHandler,
       PathFragment workspace,
       Path clientWorkingDirectory,
-      List<BuildFileName> buildFilesByPriority) {
+      List<BuildFileName> buildFilesByPriority,
+      PathFragment externalRepositoryLocation) {
     List<Root> resolvedPaths = new ArrayList<>();
 
     for (String pathElement : pathElements) {
@@ -228,7 +263,8 @@ public final class PathPackageLocator {
       }
     }
 
-    return new PathPackageLocator(outputBase, resolvedPaths, buildFilesByPriority);
+    return new PathPackageLocator(
+        outputBase, resolvedPaths, buildFilesByPriority, externalRepositoryLocation);
   }
 
   /**

@@ -82,8 +82,8 @@ import javax.annotation.Nullable;
  * memory in the {@link RemoteExternalFileSystem}.
  */
 public final class RemoteExternalOverlayFileSystem extends FileSystem {
-  private final PathFragment externalDirectory;
-  private final int externalDirectorySegmentCount;
+  private PathFragment externalDirectory;
+  private int externalDirectorySegmentCount;
   private final FileSystem nativeFs;
   private final RemoteExternalFileSystem externalFs;
   private final ConcurrentHashMap<String, Future<Void>> materializations =
@@ -191,8 +191,11 @@ public final class RemoteExternalOverlayFileSystem extends FileSystem {
    * Injects the given remote contents, possibly prefetching some files, and returns true on
    * success.
    */
-  public boolean injectRemoteRepo(RepositoryName repo, Tree remoteContents, String markerFile)
+  public boolean injectRemoteRepo(
+      RepositoryName repo, PathFragment externalDirectory, Tree remoteContents, String markerFile)
       throws IOException, InterruptedException {
+    this.externalDirectory = externalDirectory;
+    this.externalDirectorySegmentCount = externalDirectory.segmentCount();
     var repoDir = externalDirectory.getChild(repo.getName());
     deleteTree(repoDir);
     var unused = delete(externalDirectory.getChild(repo.getMarkerFileName()));

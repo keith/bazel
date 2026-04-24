@@ -54,6 +54,7 @@ public class ExternalFilesHelper {
   private final Supplier<Path> repoContentsCachePathSupplier;
   private final AtomicInteger numExternalFilesLogged = new AtomicInteger(0);
   private static final int MAX_EXTERNAL_FILES_TO_TRACK = 2500;
+  private PathFragment externalRepositoryLocation = LabelConstants.EXTERNAL_REPOSITORY_LOCATION;
 
   // These variables are set to true from multiple threads, but only read in the main thread.
   // So volatility or an AtomicBoolean is not needed.
@@ -296,7 +297,7 @@ public class ExternalFilesHelper {
       return FileType.EXTERNAL_OTHER;
     }
     if (rootedPath.asPath().startsWith(outputBase)) {
-      Path externalRepoDir = outputBase.getRelative(LabelConstants.EXTERNAL_REPOSITORY_LOCATION);
+      Path externalRepoDir = outputBase.getRelative(externalRepositoryLocation);
       if (rootedPath.asPath().startsWith(externalRepoDir)) {
         return FileType.EXTERNAL_REPO;
       } else {
@@ -404,6 +405,10 @@ public class ExternalFilesHelper {
   }
 
   private Path getExternalDirectory() {
-    return directories.getOutputBase().getRelative(LabelConstants.EXTERNAL_REPOSITORY_LOCATION);
+    return directories.getOutputBase().getRelative(externalRepositoryLocation);
+  }
+
+  void setExternalRepositoryLocation(PathFragment externalRepositoryLocation) {
+    this.externalRepositoryLocation = externalRepositoryLocation;
   }
 }

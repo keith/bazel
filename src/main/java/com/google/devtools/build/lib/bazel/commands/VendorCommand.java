@@ -36,6 +36,7 @@ import com.google.devtools.build.lib.cmdline.RepositoryName;
 import com.google.devtools.build.lib.events.Event;
 import com.google.devtools.build.lib.events.Reporter;
 import com.google.devtools.build.lib.pkgcache.PackageOptions;
+import com.google.devtools.build.lib.packages.semantics.BuildLanguageOptions;
 import com.google.devtools.build.lib.rules.repository.RepositoryDirectoryValue;
 import com.google.devtools.build.lib.rules.repository.RepositoryDirectoryValue.Failure;
 import com.google.devtools.build.lib.rules.repository.RepositoryDirectoryValue.Success;
@@ -399,7 +400,11 @@ public final class VendorCommand implements BlazeCommand {
     Path externalPath =
         env.getDirectories()
             .getOutputBase()
-            .getRelative(LabelConstants.EXTERNAL_REPOSITORY_LOCATION);
+            .getRelative(
+                LabelConstants.getExternalRepositoryLocation(
+                    env.getOptions()
+                        .getOptions(BuildLanguageOptions.class)
+                        .getIncompatibleBazelExternalDirectory()));
     vendorManager.vendorRepos(externalPath, env.getDirectories().getWorkspace(), reposToVendor);
 
     // 3. Invalidate RepositoryDirectoryValue for vendored repos.

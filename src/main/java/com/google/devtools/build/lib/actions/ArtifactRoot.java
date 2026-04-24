@@ -109,16 +109,14 @@ public final class ArtifactRoot implements Comparable<ArtifactRoot>, FileRootApi
    * Do not use except in tests and in {@link
    * com.google.devtools.build.lib.skyframe.SkyframeExecutor}.
    *
-   * <p>Returns the given path as the external source root. The path should end with {@link
-   * LabelConstants.EXTERNAL_REPOSITORY_LOCATION} since the external repository root is always
-   * $OUTPUT_BASE/external regardless of the layout of the exec root.
+   * <p>Returns the given path as the external source root. The path should end with an external
+   * repository root name since the external repository root is always under $OUTPUT_BASE regardless
+   * of the layout of the exec root.
    */
   public static ArtifactRoot asExternalSourceRoot(Root root) {
     Preconditions.checkArgument(
-        root.asPath()
-            .asFragment()
-            .getParentDirectory()
-            .endsWith(LabelConstants.EXTERNAL_REPOSITORY_LOCATION));
+        LabelConstants.isExternalPathPrefix(
+            PathFragment.create(root.asPath().asFragment().getParentDirectory().getBaseName())));
     return INTERNER.intern(
         new ArtifactRoot(root, PathFragment.EMPTY_FRAGMENT, RootType.EXTERNAL_SOURCE));
   }

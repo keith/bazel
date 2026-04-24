@@ -127,6 +127,7 @@ import com.google.devtools.build.lib.bazel.repository.RepositoryOptions;
 import com.google.devtools.build.lib.bugreport.BugReporter;
 import com.google.devtools.build.lib.buildtool.BuildRequestOptions;
 import com.google.devtools.build.lib.cmdline.IgnoredSubdirectories;
+import com.google.devtools.build.lib.cmdline.LabelConstants;
 import com.google.devtools.build.lib.cmdline.Label;
 import com.google.devtools.build.lib.cmdline.Label.LabelInterner;
 import com.google.devtools.build.lib.cmdline.Label.PackageContext;
@@ -1771,6 +1772,8 @@ public abstract class SkyframeExecutor implements WalkableGraphFactory {
     setStarlarkSemantics(starlarkSemantics);
     setSiblingDirectoryLayout(
         starlarkSemantics.getBool(BuildLanguageOptions.EXPERIMENTAL_SIBLING_REPOSITORY_LAYOUT));
+    setUseBazelExternalDirectory(
+        starlarkSemantics.getBool(BuildLanguageOptions.INCOMPATIBLE_BAZEL_EXTERNAL_DIRECTORY));
     setPackageLocator(pkgLocator);
     setLazyMacroExpansionPackages(packageOptions.getLazyMacroExpansionPackages());
     setStampSettingMarker();
@@ -1797,6 +1800,12 @@ public abstract class SkyframeExecutor implements WalkableGraphFactory {
 
   private void setSiblingDirectoryLayout(boolean experimentalSiblingRepositoryLayout) {
     this.artifactFactory.setSiblingRepositoryLayout(experimentalSiblingRepositoryLayout);
+  }
+
+  private void setUseBazelExternalDirectory(boolean useBazelExternalDirectory) {
+    this.artifactFactory.setUseBazelExternalDirectory(useBazelExternalDirectory);
+    this.externalFilesHelper.setExternalRepositoryLocation(
+        LabelConstants.getExternalRepositoryLocation(useBazelExternalDirectory));
   }
 
   public StarlarkSemantics getEffectiveStarlarkSemantics(

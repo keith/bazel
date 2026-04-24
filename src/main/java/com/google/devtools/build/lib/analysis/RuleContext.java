@@ -736,7 +736,9 @@ public class RuleContext extends TargetContext
   public PathFragment getPackageDirectory() {
     return getLabel()
         .getPackageIdentifier()
-        .getPackagePath(getConfiguration().isSiblingRepositoryLayout());
+        .getPackagePath(
+            getConfiguration().isSiblingRepositoryLayout(),
+            getConfiguration().useBazelExternalDirectory());
   }
 
   /**
@@ -1287,7 +1289,10 @@ public class RuleContext extends TargetContext
   @Override
   public PathFragment getUniqueDirectory(PathFragment fragment) {
     return AnalysisUtils.getUniqueDirectory(
-        getLabel(), fragment, getConfiguration().isSiblingRepositoryLayout());
+        getLabel(),
+        fragment,
+        getConfiguration().isSiblingRepositoryLayout(),
+        getConfiguration().useBazelExternalDirectory());
   }
 
   /**

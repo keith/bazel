@@ -445,15 +445,17 @@ public final class ArtifactFunction implements SkyFunction {
         return String.format("%s '%s'", error, ownerLabel);
       }
     } else {
-      // Not worth threading sibling repository layout config value all the way here: if either
-      // match, we know the label isn't useful.
+      // Not worth threading repository layout config values all the way here: if any layout
+      // matches, we know the label isn't useful.
       for (boolean siblingRepositoryLayout : ImmutableList.of(Boolean.FALSE, Boolean.TRUE)) {
-        if (ownerLabel
-            .getRepository()
-            .getExecPath(siblingRepositoryLayout)
-            .getRelative(labelFragment)
-            .equals(artifact.getExecPath())) {
-          return String.format("%s '%s'", error, ownerLabel);
+        for (boolean useBazelExternalDirectory : ImmutableList.of(Boolean.FALSE, Boolean.TRUE)) {
+          if (ownerLabel
+              .getRepository()
+              .getExecPath(siblingRepositoryLayout, useBazelExternalDirectory)
+              .getRelative(labelFragment)
+              .equals(artifact.getExecPath())) {
+            return String.format("%s '%s'", error, ownerLabel);
+          }
         }
       }
     }

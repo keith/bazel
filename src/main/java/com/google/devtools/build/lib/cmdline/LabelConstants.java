@@ -20,6 +20,10 @@ public class LabelConstants {
   /** The subdirectory under the output base which contains external repositories. */
   public static final PathFragment EXTERNAL_REPOSITORY_LOCATION = PathFragment.create("external");
 
+  /** The new subdirectory under the output base which contains external repositories. */
+  public static final PathFragment BAZEL_EXTERNAL_REPOSITORY_LOCATION =
+      PathFragment.create("bazel-external");
+
   /**
    * The subdirectory under the output base which contains temporary working directories for module
    * extensions.
@@ -51,7 +55,8 @@ public class LabelConstants {
 
   // With this prefix, non-main repositories are symlinked under
   // $output_base/execution_root/__main__/external
-  public static final PathFragment EXTERNAL_PATH_PREFIX = PathFragment.create("external");
+  public static final PathFragment EXTERNAL_PATH_PREFIX = EXTERNAL_REPOSITORY_LOCATION;
+  public static final PathFragment BAZEL_EXTERNAL_PATH_PREFIX = BAZEL_EXTERNAL_REPOSITORY_LOCATION;
   // With this prefix, non-main repositories are sibling symlinks of
   // $output_base/execution_root/__main__
   public static final PathFragment EXPERIMENTAL_EXTERNAL_PATH_PREFIX = PathFragment.create("..");
@@ -65,4 +70,35 @@ public class LabelConstants {
   public static final String COMMAND_LINE_OPTION_PREFIX = "//command_line_option:";
   public static final PackageIdentifier COMMAND_LINE_OPTION_PACKAGE_IDENTIFIER =
       PackageIdentifier.createInMainRepo(PathFragment.create("command_line_option"));
+
+  public static PathFragment getExternalRepositoryLocation(boolean useBazelExternalDirectory) {
+    return useBazelExternalDirectory
+        ? BAZEL_EXTERNAL_REPOSITORY_LOCATION
+        : EXTERNAL_REPOSITORY_LOCATION;
+  }
+
+  public static PathFragment getExternalPathPrefix(boolean useBazelExternalDirectory) {
+    return useBazelExternalDirectory ? BAZEL_EXTERNAL_PATH_PREFIX : EXTERNAL_PATH_PREFIX;
+  }
+
+  public static PathFragment getExternalPathPrefix(
+      boolean siblingRepositoryLayout, boolean useBazelExternalDirectory) {
+    return siblingRepositoryLayout
+        ? EXPERIMENTAL_EXTERNAL_PATH_PREFIX
+        : getExternalPathPrefix(useBazelExternalDirectory);
+  }
+
+  public static boolean isExternalPathPrefix(PathFragment path) {
+    return path.equals(EXTERNAL_PATH_PREFIX) || path.equals(BAZEL_EXTERNAL_PATH_PREFIX);
+  }
+
+  public static PathFragment getExternalPathPrefix(PathFragment path) {
+    if (path.startsWith(BAZEL_EXTERNAL_PATH_PREFIX)) {
+      return BAZEL_EXTERNAL_PATH_PREFIX;
+    }
+    if (path.startsWith(EXTERNAL_PATH_PREFIX)) {
+      return EXTERNAL_PATH_PREFIX;
+    }
+    return null;
+  }
 }

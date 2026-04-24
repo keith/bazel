@@ -50,10 +50,13 @@ public class DigestWriter {
   final Path markerPath;
 
   private DigestWriter(
-      BlazeDirectories directories, RepositoryName repositoryName, String predeclaredInputHash) {
+      BlazeDirectories directories,
+      RepositoryName repositoryName,
+      String predeclaredInputHash,
+      Path repoRoot) {
     this.directories = directories;
     this.predeclaredInputHash = predeclaredInputHash;
-    this.markerPath = getMarkerPath(directories, repositoryName);
+    this.markerPath = getMarkerPath(repoRoot, repositoryName);
   }
 
   /** Returns null if and only if a Skyframe restart is needed. */
@@ -63,14 +66,15 @@ public class DigestWriter {
       BlazeDirectories directories,
       RepositoryName repositoryName,
       RepoDefinition repoDefinition,
-      StarlarkSemantics starlarkSemantics)
+      StarlarkSemantics starlarkSemantics,
+      Path repoRoot)
       throws InterruptedException {
     String predeclaredInputHash =
         computePredeclaredInputHash(env, repoDefinition, starlarkSemantics);
     if (predeclaredInputHash == null) {
       return null;
     }
-    return new DigestWriter(directories, repositoryName, predeclaredInputHash);
+    return new DigestWriter(directories, repositoryName, predeclaredInputHash, repoRoot);
   }
 
   void writeMarkerFile(List<RepoRecordedInput.WithValue> recordedInputValues)
@@ -209,15 +213,14 @@ public class DigestWriter {
     return fp.hexDigestAndReset();
   }
 
-  private static Path getMarkerPath(BlazeDirectories directories, RepositoryName repo) {
-    return RepositoryUtils.getExternalRepositoryDirectory(directories)
-        .getChild(repo.getMarkerFileName());
+  private static Path getMarkerPath(Path repoRoot, RepositoryName repo) {
+    return repoRoot.getParentDirectory().getChild(repo.getMarkerFileName());
   }
 
-  static void clearMarkerFile(BlazeDirectories directories, RepositoryName repo)
+  static void clearMarkerFile(Path repoRoot, RepositoryName repo)
       throws RepositoryFunctionException {
     try {
-      getMarkerPath(directories, repo).delete();
+      getMarkerPath(repoRoot, repo).delete();
     } catch (IOException e) {
       throw new RepositoryFunctionException(e, Transience.TRANSIENT);
     }

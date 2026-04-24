@@ -33,6 +33,7 @@ import com.google.devtools.build.lib.cmdline.LabelConstants;
 import com.google.devtools.build.lib.cmdline.LabelSyntaxException;
 import com.google.devtools.build.lib.cmdline.LabelValidator;
 import com.google.devtools.build.lib.cmdline.RepositoryName;
+import com.google.devtools.build.lib.packages.semantics.BuildLanguageOptions;
 import com.google.devtools.build.lib.skyframe.DirectoryListingValue;
 import com.google.devtools.build.lib.skyframe.DirectoryTreeDigestValue;
 import com.google.devtools.build.lib.skyframe.EnvironmentVariableValue;
@@ -165,13 +166,24 @@ public abstract sealed class RepoRecordedInput {
   public static Optional<String> isAnyValueOutdated(
       Environment env, BlazeDirectories directories, List<WithValue> recordedInputValues)
       throws InterruptedException {
-    prefetch(env, directories, Collections2.transform(recordedInputValues, WithValue::input));
+    Boolean useBazelExternalDirectory = getUseBazelExternalDirectory(env);
+    if (useBazelExternalDirectory == null) {
+      return UNDECIDED;
+    }
+    prefetch(
+        env,
+        directories,
+        Collections2.transform(recordedInputValues, WithValue::input),
+        useBazelExternalDirectory);
     if (env.valuesMissing()) {
       return UNDECIDED;
     }
     for (var recordedInput : recordedInputValues) {
       Optional<String> reason =
-          recordedInput.input().isOutdated(env, directories, recordedInput.value());
+          recordedInput
+              .input()
+              .isOutdated(
+                  env, directories, recordedInput.value(), useBazelExternalDirectory);
       if (reason.isPresent()) {
         return reason;
       }
@@ -186,8 +198,23 @@ public abstract sealed class RepoRecordedInput {
   public static void prefetch(
       Environment env, BlazeDirectories directories, Collection<RepoRecordedInput> recordedInputs)
       throws InterruptedException {
+    Boolean useBazelExternalDirectory = getUseBazelExternalDirectory(env);
+    if (useBazelExternalDirectory == null) {
+      return;
+    }
+    prefetch(env, directories, recordedInputs, useBazelExternalDirectory);
+  }
+
+  private static void prefetch(
+      Environment env,
+      BlazeDirectories directories,
+      Collection<RepoRecordedInput> recordedInputs,
+      boolean useBazelExternalDirectory)
+      throws InterruptedException {
     var keys =
-        recordedInputs.stream().map(rri -> rri.getSkyKey(directories)).collect(toImmutableSet());
+        recordedInputs.stream()
+            .map(rri -> rri.getSkyKey(directories, useBazelExternalDirectory))
+            .collect(toImmutableSet());
     if (env.valuesMissing()) {
       return;
     }
@@ -199,6 +226,14 @@ public abstract sealed class RepoRecordedInput {
     }
   }
 
+  @Nullable
+  private static Boolean getUseBazelExternalDirectory(Environment env) throws InterruptedException {
+    var starlarkSemantics = PrecomputedValue.STARLARK_SEMANTICS.get(env);
+    return starlarkSemantics == null
+        ? null
+        : starlarkSemantics.getBool(BuildLanguageOptions.INCOMPATIBLE_BAZEL_EXTERNAL_DIRECTORY);
+  }
+
   /**
    * Returns a human-readable reason for why the given {@code oldValue} is no longer up-to-date for
    * this recorded input, or an empty Optional if it is still up-to-date.
@@ -208,9 +243,12 @@ public abstract sealed class RepoRecordedInput {
    * and will be reinvoked after a Skyframe restart.
    */
   private Optional<String> isOutdated(
-      Environment env, BlazeDirectories directories, @Nullable String oldValue)
+      Environment env,
+      BlazeDirectories directories,
+      @Nullable String oldValue,
+      boolean useBazelExternalDirectory)
       throws InterruptedException {
-    MaybeValue wrappedNewValue = getValue(env, directories);
+    MaybeValue wrappedNewValue = getValue(env, directories, useBazelExternalDirectory);
     if (env.valuesMissing()) {
       return UNDECIDED;
     }
@@ -294,8 +332,16 @@ public abstract sealed class RepoRecordedInput {
    * <p>The method can request Skyframe evaluations, and if any values are missing, this method can
    * return any value and will be reinvoked after a Skyframe restart.
    */
-  public abstract MaybeValue getValue(Environment env, BlazeDirectories directories)
-      throws InterruptedException;
+  public MaybeValue getValue(Environment env, BlazeDirectories directories)
+      throws InterruptedException {
+    return getValue(env, directories, /* useBazelExternalDirectory= */ false);
+  }
+
+  public MaybeValue getValue(
+      Environment env, BlazeDirectories directories, boolean useBazelExternalDirectory)
+      throws InterruptedException {
+    return getValue(env, directories);
+  }
 
   /**
    * Returns a human-readable description of the change from {@code oldValue} to {@code newValue}.
@@ -312,7 +358,14 @@ public abstract sealed class RepoRecordedInput {
   protected abstract Parser getParser();
 
   /** Returns the {@link SkyKey} that is necessary to determine {@link #isOutdated}. */
-  protected abstract SkyKey getSkyKey(BlazeDirectories directories);
+  protected SkyKey getSkyKey(BlazeDirectories directories) {
+    return getSkyKey(directories, /* useBazelExternalDirectory= */ false);
+  }
+
+  protected SkyKey getSkyKey(
+      BlazeDirectories directories, boolean useBazelExternalDirectory) {
+    return getSkyKey(directories);
+  }
 
   /**
    * Returns true if the {@link #getValue} can be requested even if previous recorded inputs have
@@ -377,6 +430,11 @@ public abstract sealed class RepoRecordedInput {
 
     /** Returns the rooted path corresponding to this "repo-friendly path". */
     public final RootedPath getRootedPath(BlazeDirectories directories) {
+      return getRootedPath(directories, /* useBazelExternalDirectory= */ false);
+    }
+
+    public final RootedPath getRootedPath(
+        BlazeDirectories directories, boolean useBazelExternalDirectory) {
       Root root;
       if (repoName().isEmpty()) {
         root = Root.absoluteRoot(directories.getOutputBase().getFileSystem());
@@ -392,7 +450,8 @@ public abstract sealed class RepoRecordedInput {
             Root.fromPath(
                 directories
                     .getOutputBase()
-                    .getRelative(LabelConstants.EXTERNAL_REPOSITORY_LOCATION)
+                    .getRelative(
+                        LabelConstants.getExternalRepositoryLocation(useBazelExternalDirectory))
                     .getRelative(repoName().get().getName()));
       }
       return RootedPath.toRootedPath(root, path());
@@ -485,8 +544,8 @@ public abstract sealed class RepoRecordedInput {
     }
 
     @Override
-    public SkyKey getSkyKey(BlazeDirectories directories) {
-      return FileValue.key(path.getRootedPath(directories));
+    public SkyKey getSkyKey(BlazeDirectories directories, boolean useBazelExternalDirectory) {
+      return FileValue.key(path.getRootedPath(directories, useBazelExternalDirectory));
     }
 
     @Override
@@ -497,9 +556,10 @@ public abstract sealed class RepoRecordedInput {
     }
 
     @Override
-    public MaybeValue getValue(Environment env, BlazeDirectories directories)
+    public MaybeValue getValue(
+        Environment env, BlazeDirectories directories, boolean useBazelExternalDirectory)
         throws InterruptedException {
-      var skyKey = getSkyKey(directories);
+      var skyKey = getSkyKey(directories, useBazelExternalDirectory);
       try {
         var fileValue = (FileValue) env.getValueOrThrow(skyKey, IOException.class);
         if (fileValue == null) {
@@ -581,8 +641,9 @@ public abstract sealed class RepoRecordedInput {
     }
 
     @Override
-    public SkyKey getSkyKey(BlazeDirectories directories) {
-      return DirectoryListingValue.key(path.getRootedPath(directories));
+    public SkyKey getSkyKey(BlazeDirectories directories, boolean useBazelExternalDirectory) {
+      return DirectoryListingValue.key(
+          path.getRootedPath(directories, useBazelExternalDirectory));
     }
 
     @Override
@@ -593,9 +654,10 @@ public abstract sealed class RepoRecordedInput {
     }
 
     @Override
-    public MaybeValue getValue(Environment env, BlazeDirectories directories)
+    public MaybeValue getValue(
+        Environment env, BlazeDirectories directories, boolean useBazelExternalDirectory)
         throws InterruptedException {
-      var skyKey = getSkyKey(directories);
+      var skyKey = getSkyKey(directories, useBazelExternalDirectory);
       var directoryListingValue = (DirectoryListingValue) env.getValue(skyKey);
       if (directoryListingValue == null) {
         return MaybeValue.VALUES_MISSING;
@@ -666,8 +728,9 @@ public abstract sealed class RepoRecordedInput {
     }
 
     @Override
-    public SkyKey getSkyKey(BlazeDirectories directories) {
-      return DirectoryTreeDigestValue.key(path.getRootedPath(directories));
+    public SkyKey getSkyKey(BlazeDirectories directories, boolean useBazelExternalDirectory) {
+      return DirectoryTreeDigestValue.key(
+          path.getRootedPath(directories, useBazelExternalDirectory));
     }
 
     @Override
@@ -678,9 +741,10 @@ public abstract sealed class RepoRecordedInput {
     }
 
     @Override
-    public MaybeValue getValue(Environment env, BlazeDirectories directories)
+    public MaybeValue getValue(
+        Environment env, BlazeDirectories directories, boolean useBazelExternalDirectory)
         throws InterruptedException {
-      var skyKey = getSkyKey(directories);
+      var skyKey = getSkyKey(directories, useBazelExternalDirectory);
       try {
         var directoryTreeDigestValue =
             (DirectoryTreeDigestValue) env.getValueOrThrow(skyKey, IOException.class);

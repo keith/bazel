@@ -1221,6 +1221,23 @@ public final class ConvenienceSymlinkTest extends BuildIntegrationTestCase {
   }
 
   @Test
+  public void incompatibleBazelExternalDirectory_createsExternalConvenienceSymlink()
+      throws Exception {
+    addOptions(
+        "--symlink_prefix=test-",
+        "--experimental_convenience_symlinks=normal",
+        "--incompatible_bazel_external_directory");
+
+    write("foo/BUILD", "exports_files(['bar.txt'])");
+    write("foo/bar.txt", "This is just a test file to pretend to build.");
+    buildTarget("//foo:bar.txt");
+
+    ImmutableMap<String, Path> symlinks = getConvenienceSymlinks();
+    assertThat(symlinks)
+        .containsEntry("test-external", getExecRoot().getRelative("bazel-external"));
+  }
+
+  @Test
   public void convenienceSymlinks_clean_deletesAndDoesNotCreateSymlinks() throws Exception {
     addOptions("--symlink_prefix=test-", "--experimental_convenience_symlinks=clean");
 

@@ -40,6 +40,7 @@ import com.google.devtools.build.lib.cmdline.RepositoryMapping;
 import com.google.devtools.build.lib.cmdline.RepositoryName;
 import com.google.devtools.build.lib.cmdline.StarlarkThreadContext;
 import com.google.devtools.build.lib.events.Event;
+import com.google.devtools.build.lib.packages.semantics.BuildLanguageOptions;
 import com.google.devtools.build.lib.pkgcache.PathPackageLocator;
 import com.google.devtools.build.lib.profiler.Profiler;
 import com.google.devtools.build.lib.profiler.ProfilerTask;
@@ -143,6 +144,8 @@ public final class RepositoryFetchFunction implements SkyFunction {
     if (starlarkSemantics == null) {
       return null;
     }
+    boolean useBazelExternalDirectory =
+        starlarkSemantics.getBool(BuildLanguageOptions.INCOMPATIBLE_BAZEL_EXTERNAL_DIRECTORY);
 
     RepositoryName repositoryName = (RepositoryName) skyKey.argument();
     if (!repositoryName.isVisible()) {
@@ -155,7 +158,7 @@ public final class RepositoryFetchFunction implements SkyFunction {
     try (SilentCloseable c =
         Profiler.instance().profile(ProfilerTask.REPOSITORY_FETCH, repositoryName.toString())) {
       Path repoRoot =
-          RepositoryUtils.getExternalRepositoryDirectory(directories)
+          RepositoryUtils.getExternalRepositoryDirectory(directories, useBazelExternalDirectory)
               .getRelative(repositoryName.getName());
 
       RepoDefinition repoDefinition;
@@ -183,7 +186,11 @@ public final class RepositoryFetchFunction implements SkyFunction {
               "starlark-repository-" + repositoryName.getName(),
               (workerEnv) -> {
                 return computeInternal(
-                    workerEnv, repositoryName, starlarkSemantics, repoRoot, repoDefinition);
+                    workerEnv,
+                    repositoryName,
+                    starlarkSemantics,
+                    repoRoot,
+                    repoDefinition);
               });
         } catch (ExecutionException e) {
           Throwables.throwIfInstanceOf(e.getCause(), RepositoryFunctionException.class);
@@ -219,7 +226,13 @@ public final class RepositoryFetchFunction implements SkyFunction {
       RepoDefinition repoDefinition)
       throws InterruptedException, RepositoryFunctionException {
     var digestWriter =
-        DigestWriter.create(env, directories, repositoryName, repoDefinition, starlarkSemantics);
+        DigestWriter.create(
+            env,
+            directories,
+            repositoryName,
+            repoDefinition,
+            starlarkSemantics,
+            repoRoot);
     if (digestWriter == null) {
       return null;
     }
@@ -307,7 +320,7 @@ public final class RepositoryFetchFunction implements SkyFunction {
       // is and the marker file exists on disk, a new call of this method may treat this
       // repository as valid even though it is in an inconsistent state. Clear the marker file and
       // only recreate it after fetching is done to prevent this scenario.
-      DigestWriter.clearMarkerFile(directories, repositoryName);
+      DigestWriter.clearMarkerFile(repoRoot, repositoryName);
       FetchResult result = fetchAndHandleEvents(repoDefinition, repoRoot, env, repositoryName);
       if (result == null) {
         return null;
@@ -317,7 +330,7 @@ public final class RepositoryFetchFunction implements SkyFunction {
         // This repo is eligible for the local and remote repo contents cache.
         // Replant symlinks before caching to convert absolute symlinks pointing to the
         // workspace or external root into relative paths, making the cached repo portable.
-        Path externalRepoRoot = RepositoryUtils.getExternalRepositoryDirectory(directories);
+        Path externalRepoRoot = repoRoot.getParentDirectory();
         boolean safeForLocalCacheReuse;
         try {
           safeForLocalCacheReuse =
@@ -742,7 +755,7 @@ public final class RepositoryFetchFunction implements SkyFunction {
   private RepositoryDirectoryValue setupOverride(
       PathFragment sourcePath, Environment env, Path repoRoot, RepositoryName repoName)
       throws RepositoryFunctionException, InterruptedException {
-    DigestWriter.clearMarkerFile(directories, repoName);
+    DigestWriter.clearMarkerFile(repoRoot, repoName);
     return symlinkRepoRoot(
         directories,
         repoRoot,

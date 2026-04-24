@@ -330,6 +330,25 @@ public abstract class BuildLanguageOptions extends OptionsBase {
   public abstract boolean getExperimentalSiblingRepositoryLayout();
 
   @Option(
+      name = "incompatible_bazel_external_directory",
+      defaultValue = "false",
+      documentationCategory = OptionDocumentationCategory.STARLARK_SEMANTICS,
+      effectTags = {
+        OptionEffectTag.ACTION_COMMAND_LINES,
+        OptionEffectTag.BAZEL_INTERNAL_CONFIGURATION,
+        OptionEffectTag.LOADING_AND_ANALYSIS,
+        OptionEffectTag.LOSES_INCREMENTAL_STATE
+      },
+      metadataTags = {
+        OptionMetadataTag.INCOMPATIBLE_CHANGE,
+      },
+      help =
+          "If set to true, external repositories are placed under bazel-external instead of "
+              + "external in the output base and execution root. Bazel also creates the "
+              + "bazel-external convenience symlink in the workspace.")
+  public abstract boolean getIncompatibleBazelExternalDirectory();
+
+  @Option(
       name = "incompatible_allow_tags_propagation",
       oldName = "experimental_allow_tags_propagation",
       defaultValue = "true",
@@ -877,6 +896,8 @@ public abstract class BuildLanguageOptions extends OptionsBase {
             .setBool(
                 EXPERIMENTAL_SIBLING_REPOSITORY_LAYOUT, getExperimentalSiblingRepositoryLayout())
             .setBool(
+                INCOMPATIBLE_BAZEL_EXTERNAL_DIRECTORY, getIncompatibleBazelExternalDirectory())
+            .setBool(
                 INCOMPATIBLE_ALWAYS_CHECK_DEPSET_ELEMENTS,
                 getIncompatibleAlwaysCheckDepsetElements())
             .setBool(INCOMPATIBLE_DISALLOW_EMPTY_GLOB, getIncompatibleDisallowEmptyGlob())
@@ -1070,6 +1091,8 @@ public abstract class BuildLanguageOptions extends OptionsBase {
   public static final String EXPERIMENTAL_REPO_REMOTE_EXEC = "-experimental_repo_remote_exec";
   public static final String EXPERIMENTAL_SIBLING_REPOSITORY_LAYOUT =
       "-experimental_sibling_repository_layout";
+  public static final String INCOMPATIBLE_BAZEL_EXTERNAL_DIRECTORY =
+      "-incompatible_bazel_external_directory";
   public static final String INCOMPATIBLE_ALWAYS_CHECK_DEPSET_ELEMENTS =
       "+incompatible_always_check_depset_elements";
 

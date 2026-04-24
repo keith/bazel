@@ -282,6 +282,9 @@ public class ExecutionTool {
               request
                   .getOptions(BuildLanguageOptions.class)
                   .getExperimentalSiblingRepositoryLayout(),
+              request
+                  .getOptions(BuildLanguageOptions.class)
+                  .getIncompatibleBazelExternalDirectory(),
               runtime.getWorkspace().doesAllowExternalRepositories());
       incrementalPackageRoots.eagerlyPlantSymlinksToSingleSourceRoot();
 
@@ -655,7 +658,10 @@ public class ExecutionTool {
               runtime.getProductName(),
               request
                   .getOptions(BuildLanguageOptions.class)
-                  .getExperimentalSiblingRepositoryLayout());
+                  .getExperimentalSiblingRepositoryLayout(),
+              request
+                  .getOptions(BuildLanguageOptions.class)
+                  .getIncompatibleBazelExternalDirectory());
       symlinkForest.plantSymlinkForest();
     } catch (IOException e) {
       String message = String.format("Source forest creation failed: %s", e.getMessage());
@@ -824,7 +830,10 @@ public class ExecutionTool {
           env.getDirectories(),
           getReporter(),
           targetConfigs,
-          productName);
+          productName,
+          request
+              .getOptions(BuildLanguageOptions.class)
+              .getIncompatibleBazelExternalDirectory());
     }
   }
 

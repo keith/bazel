@@ -659,4 +659,39 @@ public class SymlinkForestTest {
     assertThat(linkRoot.getRelative(LabelConstants.EXTERNAL_PATH_PREFIX).exists()).isFalse();
     assertThat(plantedSymlinks).isEmpty();
   }
+
+  @Test
+  public void testExternalPackageWithBazelExternalDirectory() throws Exception {
+    Root outputBase = Root.fromPath(fileSystem.getPath("/ob"));
+    Path linkRoot = outputBase.getRelative("execroot/ws_name");
+    linkRoot.createDirectoryAndParents();
+
+    Path externalRepoRoot =
+        outputBase
+            .getRelative(LabelConstants.BAZEL_EXTERNAL_REPOSITORY_LOCATION)
+            .getRelative("X");
+    externalRepoRoot.getRelative("dir_x/pkg").createDirectoryAndParents();
+    FileSystemUtils.createEmptyFile(externalRepoRoot.getRelative("dir_x/pkg/file"));
+
+    ImmutableMap<PackageIdentifier, Root> packageRootMap =
+        ImmutableMap.of(
+            PackageIdentifier.create(RepositoryName.create("X"), PathFragment.create("dir_x/pkg")),
+            Root.fromPath(externalRepoRoot));
+
+    ImmutableList<Path> plantedSymlinks =
+        new SymlinkForest(
+                packageRootMap,
+                linkRoot,
+                TestConstants.PRODUCT_NAME,
+                /* siblingRepositoryLayout= */ false,
+                /* useBazelExternalDirectory= */ true)
+            .plantSymlinkForest();
+
+    assertLinksTo(
+        linkRoot.getRelative(LabelConstants.BAZEL_EXTERNAL_PATH_PREFIX.getRelative("X")),
+        outputBase.getRelative(LabelConstants.BAZEL_EXTERNAL_REPOSITORY_LOCATION).getRelative("X"));
+    assertThat(linkRoot.getRelative(LabelConstants.EXTERNAL_PATH_PREFIX).exists()).isFalse();
+    assertThat(plantedSymlinks)
+        .containsExactly(linkRoot.getRelative(LabelConstants.BAZEL_EXTERNAL_PATH_PREFIX + "/X"));
+  }
 }

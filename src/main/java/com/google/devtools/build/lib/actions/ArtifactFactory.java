@@ -44,9 +44,10 @@ import javax.annotation.Nullable;
 public class ArtifactFactory implements ArtifactResolver {
 
   private final Path execRootParent;
-  private final Path externalSourceBase;
+  private final Path outputBase;
   private final PathFragment derivedPathPrefix;
   private boolean siblingRepositoryLayout = false;
+  private boolean useBazelExternalDirectory = false;
 
   /** Cache of source artifacts. */
   private final SourceArtifactCache sourceArtifactCache = new SourceArtifactCache();
@@ -247,10 +248,7 @@ public class ArtifactFactory implements ArtifactResolver {
    */
   public ArtifactFactory(Path execRootParent, String derivedPathPrefix) {
     this.execRootParent = execRootParent;
-    this.externalSourceBase =
-        execRootParent
-            .getParentDirectory()
-            .getRelative(LabelConstants.EXTERNAL_REPOSITORY_LOCATION);
+    this.outputBase = execRootParent.getParentDirectory();
     this.derivedPathPrefix = PathFragment.create(derivedPathPrefix);
   }
 
@@ -262,6 +260,10 @@ public class ArtifactFactory implements ArtifactResolver {
 
   public void setSiblingRepositoryLayout(boolean siblingRepositoryLayout) {
     this.siblingRepositoryLayout = siblingRepositoryLayout;
+  }
+
+  public void setUseBazelExternalDirectory(boolean useBazelExternalDirectory) {
+    this.useBazelExternalDirectory = useBazelExternalDirectory;
   }
 
   /**
@@ -286,6 +288,9 @@ public class ArtifactFactory implements ArtifactResolver {
   @Override
   public SourceArtifact getSourceArtifact(PathFragment execPath, Root root, ArtifactOwner owner) {
     // TODO(jungjw): Come up with a more reliable way to distinguish external source roots.
+    Path externalSourceBase =
+        outputBase.getRelative(
+            LabelConstants.getExternalRepositoryLocation(useBazelExternalDirectory));
     ArtifactRoot artifactRoot =
         root.asPath() != null && root.asPath().startsWith(externalSourceBase)
             ? ArtifactRoot.asExternalSourceRoot(root)

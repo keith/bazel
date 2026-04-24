@@ -26,6 +26,7 @@ import com.google.devtools.build.lib.analysis.config.SymlinkDefinition;
 import com.google.devtools.build.lib.buildeventstream.BuildEventStreamProtos.ConvenienceSymlink;
 import com.google.devtools.build.lib.buildeventstream.BuildEventStreamProtos.ConvenienceSymlink.Action;
 import com.google.devtools.build.lib.buildtool.BuildRequestOptions.ConvenienceSymlinksMode;
+import com.google.devtools.build.lib.cmdline.LabelConstants;
 import com.google.devtools.build.lib.cmdline.RepositoryName;
 import com.google.devtools.build.lib.events.Event;
 import com.google.devtools.build.lib.events.EventHandler;
@@ -54,9 +55,12 @@ public final class OutputDirectoryLinksUtils {
    * <p>The order of the result indicates precedence for {@link PathPrettyPrinter}.
    */
   private static ImmutableList<SymlinkDefinition> getAllLinkDefinitions(
-      Iterable<SymlinkDefinition> symlinkDefinitions) {
+      Iterable<SymlinkDefinition> symlinkDefinitions, boolean useBazelExternalDirectory) {
     ImmutableList.Builder<SymlinkDefinition> builder = ImmutableList.builder();
     builder.addAll(STANDARD_LINK_DEFINITIONS);
+    if (useBazelExternalDirectory) {
+      builder.add(BAZEL_EXTERNAL_LINK_DEFINITION);
+    }
     builder.addAll(symlinkDefinitions);
     return builder.build();
   }
@@ -97,7 +101,8 @@ public final class OutputDirectoryLinksUtils {
       BlazeDirectories directories,
       EventHandler eventHandler,
       Set<BuildConfigurationValue> targetConfigs,
-      String productName) {
+      String productName,
+      boolean useBazelExternalDirectory) {
     Path execRoot = directories.getExecRoot(workspaceName);
     Path outputPath = directories.getOutputPath(workspaceName);
     String symlinkPrefix = buildRequestOptions.getSymlinkPrefix(productName);
@@ -116,7 +121,8 @@ public final class OutputDirectoryLinksUtils {
     RepositoryName repositoryName = RepositoryName.MAIN;
     boolean logOnly = mode == ConvenienceSymlinksMode.LOG_ONLY;
 
-    for (SymlinkDefinition symlink : getAllLinkDefinitions(symlinkDefinitions)) {
+    for (SymlinkDefinition symlink :
+        getAllLinkDefinitions(symlinkDefinitions, useBazelExternalDirectory)) {
       String linkName = symlink.getLinkName(symlinkPrefix, workspaceBaseName);
       if (!createdLinks.add(linkName)) {
         // already created a link by this name
@@ -192,7 +198,8 @@ public final class OutputDirectoryLinksUtils {
 
     String workspaceBaseName = workspace.getBaseName();
 
-    for (SymlinkDefinition link : getAllLinkDefinitions(symlinkDefinitions)) {
+    for (SymlinkDefinition link :
+        getAllLinkDefinitions(symlinkDefinitions, /* useBazelExternalDirectory= */ true)) {
       removeLink(
           workspace,
           link.getLinkName(symlinkPrefix, workspaceBaseName),
@@ -361,6 +368,24 @@ public final class OutputDirectoryLinksUtils {
               return ImmutableSet.of(execRoot);
             }
           });
+
+  private static final SymlinkDefinition BAZEL_EXTERNAL_LINK_DEFINITION =
+      new SymlinkDefinition() {
+        @Override
+        public String getLinkName(String symlinkPrefix, String workspaceBaseName) {
+          return symlinkPrefix + "external";
+        }
+
+        @Override
+        public ImmutableSet<Path> getLinkPaths(
+            BuildRequestOptions buildRequestOptions,
+            Set<BuildConfigurationValue> targetConfigs,
+            RepositoryName repositoryName,
+            Path outputPath,
+            Path execRoot) {
+          return ImmutableSet.of(execRoot.getRelative(LabelConstants.BAZEL_EXTERNAL_PATH_PREFIX));
+        }
+      };
 
   static final SymlinkCreationResult EMPTY_SYMLINK_CREATION_RESULT =
       new SymlinkCreationResult(ImmutableList.of(), ImmutableMap.of());

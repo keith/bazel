@@ -75,6 +75,13 @@ public class RepositoryUtils {
     return directories.getOutputBase().getRelative(LabelConstants.EXTERNAL_REPOSITORY_LOCATION);
   }
 
+  protected static Path getExternalRepositoryDirectory(
+      BlazeDirectories directories, boolean useBazelExternalDirectory) {
+    return directories
+        .getOutputBase()
+        .getRelative(LabelConstants.getExternalRepositoryLocation(useBazelExternalDirectory));
+  }
+
   /**
    * Replants the symlinks under the specified repository directory.
    *

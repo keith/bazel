@@ -517,7 +517,7 @@ public abstract sealed class Artifact
   public PathFragment getRepositoryRelativePath() {
     PathFragment relativePath = getRootRelativePath();
     // External artifacts under legacy roots are still prefixed with "external/<repo name>".
-    if (root.isLegacy() && relativePath.startsWith(LabelConstants.EXTERNAL_PATH_PREFIX)) {
+    if (root.isLegacy() && LabelConstants.getExternalPathPrefix(relativePath) != null) {
       relativePath = relativePath.subFragment(2);
     }
     return relativePath;
@@ -649,9 +649,11 @@ public abstract sealed class Artifact
     // Runfile paths for external artifacts should be prefixed with "../<repo name>".
     if (root.isLegacy()) {
       // Root-relative paths of external artifacts under legacy roots are already prefixed with
-      // "external/<repo name>". Just replace "external" with "..".
-      if (relativePath.startsWith(LabelConstants.EXTERNAL_PATH_PREFIX)) {
-        relativePath = relativePath.relativeTo(LabelConstants.EXTERNAL_PATH_PREFIX);
+      // "external/<repo name>" or "bazel-external/<repo name>". Just replace the external
+      // directory with "..".
+      PathFragment externalPathPrefix = LabelConstants.getExternalPathPrefix(relativePath);
+      if (externalPathPrefix != null) {
+        relativePath = relativePath.relativeTo(externalPathPrefix);
         relativePath = LabelConstants.EXTERNAL_RUNFILES_PATH_PREFIX.getRelative(relativePath);
       }
     } else {

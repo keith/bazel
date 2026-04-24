@@ -125,8 +125,8 @@ public final class RepositoryName {
     PathFragment prefix =
         siblingRepositoryLayout
             ? LabelConstants.EXPERIMENTAL_EXTERNAL_PATH_PREFIX
-            : LabelConstants.EXTERNAL_PATH_PREFIX;
-    if (!path.startsWith(prefix)) {
+            : LabelConstants.getExternalPathPrefix(path);
+    if (prefix == null || !path.startsWith(prefix)) {
       return null;
     }
 
@@ -331,13 +331,16 @@ public final class RepositoryName {
    * __main__), instead of "$execroot/external/repo".
    */
   public PathFragment getExecPath(boolean siblingRepositoryLayout) {
+    return getExecPath(siblingRepositoryLayout, /* useBazelExternalDirectory= */ false);
+  }
+
+  public PathFragment getExecPath(
+      boolean siblingRepositoryLayout, boolean useBazelExternalDirectory) {
     if (isMain()) {
       return PathFragment.EMPTY_FRAGMENT;
     }
     PathFragment prefix =
-        siblingRepositoryLayout
-            ? LabelConstants.EXPERIMENTAL_EXTERNAL_PATH_PREFIX
-            : LabelConstants.EXTERNAL_PATH_PREFIX;
+        LabelConstants.getExternalPathPrefix(siblingRepositoryLayout, useBazelExternalDirectory);
     return prefix.getRelative(getName());
   }
 

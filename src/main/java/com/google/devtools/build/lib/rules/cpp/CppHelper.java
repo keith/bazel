@@ -66,8 +66,10 @@ public class CppHelper {
   }
 
   /** Returns the directory where object files are created. */
-  public static PathFragment getObjDirectory(Label ruleLabel, boolean siblingRepositoryLayout) {
-    return AnalysisUtils.getUniqueDirectory(ruleLabel, OBJS, siblingRepositoryLayout);
+  private static PathFragment getObjDirectory(
+      Label ruleLabel, boolean siblingRepositoryLayout, boolean useBazelExternalDirectory) {
+    return AnalysisUtils.getUniqueDirectory(
+        ruleLabel, OBJS, siblingRepositoryLayout, useBazelExternalDirectory);
   }
 
   // LINT.IfChange
@@ -87,7 +89,9 @@ public class CppHelper {
       Label label,
       String outputName,
       BuildConfigurationValue config) {
-    PathFragment objectDir = getObjDirectory(label, config.isSiblingRepositoryLayout());
+    PathFragment objectDir =
+        getObjDirectory(
+            label, config.isSiblingRepositoryLayout(), config.useBazelExternalDirectory());
     return actionConstructionContext.getDerivedArtifact(
         objectDir.getRelative(outputName), config.getBinDirectory(label.getRepository()));
   }

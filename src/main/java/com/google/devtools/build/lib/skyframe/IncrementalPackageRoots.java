@@ -85,6 +85,7 @@ public class IncrementalPackageRoots implements PackageRoots {
 
   private final IgnoredSubdirectories ignoredPaths;
   private final boolean useSiblingRepositoryLayout;
+  private final boolean useBazelExternalDirectory;
 
   private final boolean allowExternalRepositories;
   @Nullable private EventBus eventBus;
@@ -99,6 +100,7 @@ public class IncrementalPackageRoots implements PackageRoots {
       String prefix,
       IgnoredSubdirectories ignoredPaths,
       boolean useSiblingRepositoryLayout,
+      boolean useBazelExternalDirectory,
       boolean allowExternalRepositories) {
     this.threadSafeExternalRepoPackageRootsMap = Maps.newConcurrentMap();
     this.execroot = execroot;
@@ -107,6 +109,7 @@ public class IncrementalPackageRoots implements PackageRoots {
     this.ignoredPaths = ignoredPaths;
     this.eventBus = eventBus;
     this.useSiblingRepositoryLayout = useSiblingRepositoryLayout;
+    this.useBazelExternalDirectory = useBazelExternalDirectory;
     this.allowExternalRepositories = allowExternalRepositories;
     this.symlinkPlantingPool =
         MoreExecutors.listeningDecorator(
@@ -122,6 +125,7 @@ public class IncrementalPackageRoots implements PackageRoots {
       String prefix,
       IgnoredSubdirectories ignoredSubdirectories,
       boolean useSiblingRepositoryLayout,
+      boolean useBazelExternalDirectory,
       boolean allowExternalRepositories) {
     IncrementalPackageRoots incrementalPackageRoots =
         new IncrementalPackageRoots(
@@ -131,6 +135,7 @@ public class IncrementalPackageRoots implements PackageRoots {
             prefix,
             ignoredSubdirectories,
             useSiblingRepositoryLayout,
+            useBazelExternalDirectory,
             allowExternalRepositories);
     eventBus.register(incrementalPackageRoots);
     return incrementalPackageRoots;
@@ -284,6 +289,7 @@ public class IncrementalPackageRoots implements PackageRoots {
             pkg.sourceRoot().asPath(),
             execroot,
             useSiblingRepositoryLayout,
+            useBazelExternalDirectory,
             lazilyPlantedSymlinksRef);
       } else if (!maybeConflictingBaseNamesLowercase.isEmpty()) {
         String originalBaseName = pkgId.getTopLevelDir();

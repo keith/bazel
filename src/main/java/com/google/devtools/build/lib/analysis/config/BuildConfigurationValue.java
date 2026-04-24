@@ -138,6 +138,7 @@ public class BuildConfigurationValue
   private final BuildOptionDetails buildOptionDetails;
 
   private final boolean siblingRepositoryLayout;
+  private final boolean useBazelExternalDirectory;
 
   private final FeatureSet defaultFeatures;
 
@@ -196,6 +197,7 @@ public class BuildConfigurationValue
       BuildOptions buildOptions,
       @Nullable BuildOptions baselineOptions,
       boolean siblingRepositoryLayout,
+      boolean useBazelExternalDirectory,
       String platformCpu,
       // Arguments below this are server-global.
       BlazeDirectories directories,
@@ -217,6 +219,7 @@ public class BuildConfigurationValue
         buildOptions,
         mnemonic,
         siblingRepositoryLayout,
+        useBazelExternalDirectory,
         platformCpu,
         globalProvider.getRunfilesPrefix(),
         directories,
@@ -238,6 +241,27 @@ public class BuildConfigurationValue
       GlobalStateProvider globalProvider,
       FragmentFactory fragmentFactory)
       throws InvalidConfigurationException {
+    return createForTesting(
+        buildOptions,
+        mnemonic,
+        siblingRepositoryLayout,
+        /* useBazelExternalDirectory= */ false,
+        directories,
+        globalProvider,
+        fragmentFactory);
+  }
+
+  @VisibleForTesting
+  public static BuildConfigurationValue createForTesting(
+      BuildOptions buildOptions,
+      String mnemonic,
+      boolean siblingRepositoryLayout,
+      boolean useBazelExternalDirectory,
+      // Arguments below this are server-global.
+      BlazeDirectories directories,
+      GlobalStateProvider globalProvider,
+      FragmentFactory fragmentFactory)
+      throws InvalidConfigurationException {
 
     FragmentClassSet fragmentClasses =
         buildOptions.hasNoConfig()
@@ -250,6 +274,7 @@ public class BuildConfigurationValue
         buildOptions,
         mnemonic,
         siblingRepositoryLayout,
+        useBazelExternalDirectory,
         "",
         globalProvider.getRunfilesPrefix(),
         directories,
@@ -277,6 +302,7 @@ public class BuildConfigurationValue
       BuildOptions buildOptions,
       String mnemonic,
       boolean siblingRepositoryLayout,
+      boolean useBazelExternalDirectory,
       String platformCpu,
       // Arguments below this are either server-global and constant or completely dependent values.
       String workspaceName,
@@ -301,6 +327,7 @@ public class BuildConfigurationValue
             siblingRepositoryLayout);
     this.workspaceName = workspaceName;
     this.siblingRepositoryLayout = siblingRepositoryLayout;
+    this.useBazelExternalDirectory = useBazelExternalDirectory;
 
     // We can't use an ImmutableMap.Builder here; we need the ability to add entries with keys that
     // are already in the map so that the same define can be specified on the command line twice,
@@ -346,12 +373,14 @@ public class BuildConfigurationValue
     return this.buildOptions.equals(otherVal.buildOptions)
         && this.workspaceName.equals(otherVal.workspaceName)
         && this.siblingRepositoryLayout == otherVal.siblingRepositoryLayout
+        && this.useBazelExternalDirectory == otherVal.useBazelExternalDirectory
         && this.mnemonic.equals(otherVal.mnemonic);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(buildOptions, workspaceName, siblingRepositoryLayout, mnemonic);
+    return Objects.hash(
+        buildOptions, workspaceName, siblingRepositoryLayout, useBazelExternalDirectory, mnemonic);
   }
 
   private ImmutableMap<String, Class<? extends Fragment>> buildIndexOfStarlarkVisibleFragments() {
@@ -522,6 +551,10 @@ public class BuildConfigurationValue
 
   public boolean isSiblingRepositoryLayout() {
     return siblingRepositoryLayout;
+  }
+
+  public boolean useBazelExternalDirectory() {
+    return useBazelExternalDirectory;
   }
 
   @Override

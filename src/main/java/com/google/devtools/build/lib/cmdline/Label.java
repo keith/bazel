@@ -390,7 +390,9 @@ public final class Label implements Comparable<Label>, StarlarkValue, SkyKey, Co
     checkRepoVisibilityForStarlark("workspace_root");
     return packageIdentifier
         .getRepository()
-        .getExecPath(semantics.getBool(BuildLanguageOptions.EXPERIMENTAL_SIBLING_REPOSITORY_LAYOUT))
+        .getExecPath(
+            semantics.getBool(BuildLanguageOptions.EXPERIMENTAL_SIBLING_REPOSITORY_LAYOUT),
+            semantics.getBool(BuildLanguageOptions.INCOMPATIBLE_BAZEL_EXTERNAL_DIRECTORY))
         .toString();
   }
 

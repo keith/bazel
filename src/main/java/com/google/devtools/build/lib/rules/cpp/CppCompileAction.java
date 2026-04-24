@@ -1199,8 +1199,8 @@ public class CppCompileAction extends AbstractAction
       PathFragment prefix =
           siblingRepositoryLayout
               ? LabelConstants.EXPERIMENTAL_EXTERNAL_PATH_PREFIX
-              : LabelConstants.EXTERNAL_PATH_PREFIX;
-      if (includePath.startsWith(prefix)) {
+              : LabelConstants.getExternalPathPrefix(includePath);
+      if (prefix != null && includePath.startsWith(prefix)) {
         includePath = includePath.relativeTo(prefix);
       }
       if (includePath.isAbsolute() || includePath.containsUplevelReferences()) {

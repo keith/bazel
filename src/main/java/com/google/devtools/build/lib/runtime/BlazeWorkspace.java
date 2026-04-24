@@ -29,11 +29,13 @@ import com.google.devtools.build.lib.actions.cache.CompactPersistentActionCache;
 import com.google.devtools.build.lib.analysis.BlazeDirectories;
 import com.google.devtools.build.lib.analysis.WorkspaceStatusAction;
 import com.google.devtools.build.lib.buildtool.BuildRequestOptions;
+import com.google.devtools.build.lib.cmdline.LabelConstants;
 import com.google.devtools.build.lib.events.NullEventHandler;
 import com.google.devtools.build.lib.events.Reporter;
 import com.google.devtools.build.lib.exec.BinTools;
 import com.google.devtools.build.lib.pkgcache.PackageOptions;
 import com.google.devtools.build.lib.pkgcache.PathPackageLocator;
+import com.google.devtools.build.lib.packages.semantics.BuildLanguageOptions;
 import com.google.devtools.build.lib.profiler.AutoProfiler;
 import com.google.devtools.build.lib.profiler.ProfilerTask;
 import com.google.devtools.build.lib.profiler.memory.AllocationTracker;
@@ -498,12 +500,16 @@ public final class BlazeWorkspace {
     if (virtualPackageLocator != null) {
       return virtualPackageLocator;
     }
+    BuildLanguageOptions buildLanguageOptions = options.getOptions(BuildLanguageOptions.class);
     return PathPackageLocator.create(
         directories.getOutputBase(),
         packageOptions.getPackagePath(),
         NullEventHandler.INSTANCE,
         workspace.asFragment(),
         workspace,
-        skyframeExecutor.getBuildFilesByPriority());
+        skyframeExecutor.getBuildFilesByPriority(),
+        LabelConstants.getExternalRepositoryLocation(
+            buildLanguageOptions != null
+                && buildLanguageOptions.getIncompatibleBazelExternalDirectory()));
   }
 }

@@ -1664,7 +1664,12 @@ Strip the given number of leading components from file paths on extraction. Only
       return RepoCacheFriendlyPath.createInsideWorkspace(RepositoryName.MAIN, relPath);
     }
     Path outputBaseExternal =
-        directories.getOutputBase().getRelative(LabelConstants.EXTERNAL_REPOSITORY_LOCATION);
+        directories
+            .getOutputBase()
+            .getRelative(
+                LabelConstants.getExternalRepositoryLocation(
+                    starlarkSemantics.getBool(
+                        BuildLanguageOptions.INCOMPATIBLE_BAZEL_EXTERNAL_DIRECTORY)));
     if (path.startsWith(outputBaseExternal)) {
       PathFragment relPath = path.relativeTo(outputBaseExternal);
       if (!relPath.isEmpty()) {

@@ -106,7 +106,10 @@ public final class PackageIdentifier implements SkyKey, Comparable<PackageIdenti
     PathFragment prefix =
         siblingRepositoryLayout
             ? LabelConstants.EXPERIMENTAL_EXTERNAL_PATH_PREFIX
-            : LabelConstants.EXTERNAL_PATH_PREFIX;
+            : LabelConstants.getExternalPathPrefix(tofind);
+    if (prefix == null) {
+      return Optional.of(PackageIdentifier.createInMainRepo(tofind));
+    }
     if (tofind.startsWith(prefix)) {
       // Using the path prefix can be either "external" or "..", depending on whether the sibling
       // repository layout is used.
@@ -186,15 +189,26 @@ public final class PackageIdentifier implements SkyKey, Comparable<PackageIdenti
    */
   // TODO(bazel-team): Rename getDerivedArtifactPath or similar.
   public PathFragment getPackagePath(boolean siblingRepositoryLayout) {
+    return getPackagePath(siblingRepositoryLayout, /* useBazelExternalDirectory= */ false);
+  }
+
+  public PathFragment getPackagePath(
+      boolean siblingRepositoryLayout, boolean useBazelExternalDirectory) {
     return repository.isMain() || siblingRepositoryLayout
         ? pkgName
-        : LabelConstants.EXTERNAL_PATH_PREFIX
+        : LabelConstants.getExternalPathPrefix(useBazelExternalDirectory)
             .getRelative(repository.getName())
             .getRelative(pkgName);
   }
 
   public PathFragment getExecPath(boolean siblingRepositoryLayout) {
-    return repository.getExecPath(siblingRepositoryLayout).getRelative(pkgName);
+    return getExecPath(siblingRepositoryLayout, /* useBazelExternalDirectory= */ false);
+  }
+
+  public PathFragment getExecPath(
+      boolean siblingRepositoryLayout, boolean useBazelExternalDirectory) {
+    return repository.getExecPath(siblingRepositoryLayout, useBazelExternalDirectory)
+        .getRelative(pkgName);
   }
 
   /**

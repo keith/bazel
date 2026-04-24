@@ -77,6 +77,7 @@ import com.google.devtools.build.lib.bazel.repository.starlark.StarlarkRepositor
 import com.google.devtools.build.lib.clock.Clock;
 import com.google.devtools.build.lib.cmdline.LabelConstants;
 import com.google.devtools.build.lib.events.Event;
+import com.google.devtools.build.lib.packages.semantics.BuildLanguageOptions;
 import com.google.devtools.build.lib.pkgcache.PackageOptions;
 import com.google.devtools.build.lib.profiler.Profiler;
 import com.google.devtools.build.lib.profiler.ProfilerTask;
@@ -557,7 +558,13 @@ public class BazelRepositoryModule extends BlazeModule {
       bazelLockfileMode = repoOptions.getLockfileMode();
       allowedYankedVersions = repoOptions.getAllowedYankedVersions();
       if (env.getWorkspace() != null) {
-        Path externalRoot = env.getOutputBase().getRelative(LabelConstants.EXTERNAL_PATH_PREFIX);
+        Path externalRoot =
+            env.getOutputBase()
+                .getRelative(
+                    LabelConstants.getExternalRepositoryLocation(
+                        env.getOptions()
+                            .getOptions(BuildLanguageOptions.class)
+                            .getIncompatibleBazelExternalDirectory()));
         vendorDirectory =
             Optional.ofNullable(repoOptions.getVendorDirectory())
                 .map(vendorDirectory -> env.getWorkspace().getRelative(vendorDirectory));

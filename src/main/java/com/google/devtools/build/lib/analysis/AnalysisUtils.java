@@ -145,10 +145,13 @@ public final class AnalysisUtils {
    * <p>For example "//pkg:target" -> "pkg/&lt;fragment&gt;/target.
    */
   public static PathFragment getUniqueDirectory(
-      Label label, PathFragment fragment, boolean siblingRepositoryLayout) {
+      Label label,
+      PathFragment fragment,
+      boolean siblingRepositoryLayout,
+      boolean useBazelExternalDirectory) {
     return label
         .getPackageIdentifier()
-        .getPackagePath(siblingRepositoryLayout)
+        .getPackagePath(siblingRepositoryLayout, useBazelExternalDirectory)
         .getRelative(fragment)
         .getRelative(label.getName());
   }
